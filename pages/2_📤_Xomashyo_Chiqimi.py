@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import base64
+import fitz  # PyMuPDF
 import io
 from datetime import date
 from database import (
@@ -42,11 +43,24 @@ with tab_pdf:
             # CHAP: PDF ko'rish
             with col_pdf:
                 section_header("PDF ko'rish", "eye")
-                b64 = base64.b64encode(file_bytes).decode()
-                st.markdown(
-                    f'<iframe src="data:application/pdf;base64,{b64}" '
-                    f'width="100%" height="600" style="border:1px solid #ddd; border-radius:8px;"></iframe>',
-                    unsafe_allow_html=True,
+                # PDF sahifalarini rasm qilib ko'rsatish
+                try:
+                    pdf_doc = fitz.open(stream=file_bytes, filetype="pdf")
+                    for page_num in range(len(pdf_doc)):
+                        page = pdf_doc[page_num]
+                        pix = page.get_pixmap(dpi=150)
+                        img_bytes = pix.tobytes("png")
+                        st.image(img_bytes, caption=f"Sahifa {page_num + 1}", use_container_width=True)
+                    pdf_doc.close()
+                except Exception:
+                    st.warning("PDF ko'rsatib bo'lmadi")
+                # PDF yuklab olish
+                st.download_button(
+                    "PDF yuklab olish",
+                    data=file_bytes,
+                    file_name=uploaded_file.name,
+                    mime="application/pdf",
+                    key=f"pdf_dl_{file_idx}",
                 )
 
             # O'NG: HAMMA jadvallar
